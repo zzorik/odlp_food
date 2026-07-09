@@ -51,8 +51,16 @@
       <div class="ost-stat"><b id="ostFilled">0</b> / <span id="ostTotal">0</span> заполнено</div>
       <input id="ostSearch" class="search" type="search" placeholder="поиск позиции…" inputmode="search">
     </div>
+    <div class="ost-legend">
+      <b>Как заполнять:</b> пиши что видишь на полке — само сложит в кг/л.
+      <div class="ost-ex">
+        <span>✏️ <code>2 пачки по 900 гр</code></span>
+        <span>✏️ <code>2х900</code> <em>или</em> <code>2 по 900 г</code></span>
+        <span>✏️ <code>2×450г 4×700 2кг</code> → 5.7 кг</span>
+        <span>✏️ просто число = уже в кг/л: <code>5.7</code></span>
+      </div>
+    </div>
     <div class="ost-tools">
-      <span class="ost-hint">💡 можно пачками: <code>2×450г 4×700 2кг</code> — само сложит в кг</span>
       <button id="ostClear" class="linkbtn danger">очистить все остатки</button>
     </div>
     <div id="ostList" class="ost-list"></div>

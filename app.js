@@ -1,6 +1,6 @@
 'use strict';
 /* Завхоз · Ладога — вся клиентская логика. Ванильный JS, без сборки. */
-const BUILD = '2026-07-09 · сборка 2 (пачки + Курки/Исмаил)';
+const BUILD = '2026-07-09 · сборка 3 (легенда + вёрстка строк)';
 
 // ================= состояние =================
 const LS = { ost:'zavhoz.ostatki', ostRaw:'zavhoz.ostatkiRaw', camp:'zavhoz.camp', set:'zavhoz.settings' };
@@ -352,7 +352,7 @@ function renderOstatki(){
       const row = document.createElement('div');
       row.className = 'row' + (has?' has-val':'');
       row.innerHTML =
-        `<span class="row-name">${esc(p.pozitsiya)}${p.fasovka?`<small>${esc(p.fasovka)}</small>`:''}</span>
+        `<span class="row-name">${esc(p.pozitsiya)}</span>
          <input class="row-in${has?' filled':''}" type="text" inputmode="${kind.measure?'text':'decimal'}"
                 placeholder="—" value="${esc(rawInit)}" aria-label="${esc(p.pozitsiya)}"
                 ${kind.measure?`title="можно пачками: 2×450г 4×700 2кг"`:''}>
