@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c5545">
+<title>Завхоз · Ладога</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">▚</span>
+    <div class="brand-txt">
+      <b>Завхоз</b>
+      <small>склад лагеря · Ладога</small>
+    </div>
+  </div>
+  <div id="net" class="net" title="состояние сети"></div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab is-active" data-view="ostatki" role="tab">Остатки</button>
+  <button class="tab" data-view="zakupka" role="tab">Закупка</button>
+  <button class="tab" data-view="camp" role="tab">Лагерь</button>
+  <button class="tab" data-view="settings" role="tab">⚙</button>
+</nav>
+
+<main>
+  <!-- ============ ОСТАТКИ ============ -->
+  <section id="view-ostatki" class="view is-active">
+    <div class="voice card">
+      <button id="micBtn" class="mic">
+        <span class="mic-ico">🎤</span>
+        <span class="mic-label">Записать голосом</span>
+      </button>
+      <div id="micHint" class="mic-hint">Наговори остатки: «гречка два кило, тушёнка 18 банок по 325…»</div>
+      <button id="typeToggle" class="linkbtn">⌨ напечатать вместо голоса</button>
+      <div id="typeBox" class="typebox" hidden>
+        <textarea id="typeArea" rows="3" placeholder="гречка 2 кило, тушёнка 18 банок по 325 грамм, молоко 8 литров…"></textarea>
+        <button id="typeSend" class="btn btn-primary">Разобрать текст</button>
+      </div>
+    </div>
+
+    <div id="parseStatus" class="parse-status" hidden></div>
+    <div id="confirm" class="confirm card" hidden></div>
+
+    <div class="ost-head">
+      <div class="ost-stat"><b id="ostFilled">0</b> / <span id="ostTotal">0</span> заполнено</div>
+      <input id="ostSearch" class="search" type="search" placeholder="поиск позиции…" inputmode="search">
+    </div>
+    <div class="ost-tools">
+      <button id="ostClear" class="linkbtn danger">очистить все остатки</button>
+    </div>
+    <div id="ostList" class="ost-list"></div>
+  </section>
+
+  <!-- ============ ЗАКУПКА ============ -->
+  <section id="view-zakupka" class="view">
+    <div class="card zk-controls">
+      <label class="chk"><input type="checkbox" id="hideUnknown"> прятать непересчитанные (?)</label>
+      <button id="calcBtn" class="btn btn-primary big">Рассчитать закупку</button>
+    </div>
+    <div id="zkResult" class="zk-result"></div>
+  </section>
+
+  <!-- ============ ЛАГЕРЬ ============ -->
+  <section id="view-camp" class="view">
+    <div class="card form">
+      <label class="field">
+        <span>Людей в лагере</span>
+        <input id="fLyudi" type="number" min="1" max="80" inputmode="numeric">
+      </label>
+      <label class="field">
+        <span>Патруль (+к людям)</span>
+        <input id="fPatrul" type="number" min="0" max="30" inputmode="numeric">
+      </label>
+      <label class="field">
+        <span>Закладываемся на дней</span>
+        <input id="fPlan" type="number" min="1" max="30" inputmode="numeric">
+      </label>
+      <div class="field">
+        <span>Режим</span>
+        <div class="segmented">
+          <button class="seg is-active" data-rezhim="plan">Плановый</button>
+          <button class="seg" data-rezhim="srochno">Срочный</button>
+        </div>
+      </div>
+      <p class="hint">Расчёт: расход × (люди + патруль) × min(целевой запас, план дней). Патруль по умолчанию 5, план 7.</p>
+    </div>
+  </section>
+
+  <!-- ============ НАСТРОЙКИ ============ -->
+  <section id="view-settings" class="view">
+    <div class="card form">
+      <label class="field">
+        <span>URL Cloudflare Worker</span>
+        <input id="sWorker" type="url" placeholder="https://zavhoz.ТВОЙ.workers.dev" inputmode="url">
+      </label>
+      <label class="field">
+        <span>Модель (OpenRouter)</span>
+        <input id="sModel" type="text" placeholder="google/gemini-2.0-flash-001">
+      </label>
+      <p class="hint">Голосовой ввод шлёт аудио в Worker → OpenRouter. Без URL голос выключен, но таблица, расчёт и копирование работают офлайн.</p>
+      <div class="setrow">
+        <button id="sExport" class="btn">Выгрузить данные (JSON)</button>
+        <button id="sReset" class="btn danger">Сбросить всё</button>
+      </div>
+      <p class="ver">Завхоз · Ладога · v1</p>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

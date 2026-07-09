@@ -1,0 +1,121 @@
+# Завхоз · Ладога — PWA
+
+Учёт остатков склада голосом и расчёт закупки по источникам. Работает офлайн, ставится на телефон как приложение.
+
+## Что где лежит
+
+| Файл | Роль |
+|---|---|
+| `index.html` | каркас |
+| `styles.css` | оформление |
+| `app.js` | вся логика: голос, парсинг, таблица, расчёт, копирование |
+| `raskladka.json` | твоя раскладка на 84 позиции (сгенерирована из `raskladka.csv`) |
+| `sw.js` | service worker — офлайн |
+| `manifest.webmanifest` | манифест для установки |
+| `icons/` | иконки приложения |
+| `worker.js` | **отдельно** — Cloudflare Worker, прокси к OpenRouter (прячет ключ) |
+
+---
+
+## Часть 1. PWA на GitHub Pages (нудная база, делается один раз)
+
+1. Заведи репозиторий, например `zavhoz`, и положи туда всё из этой папки **кроме** `worker.js` (он живёт в Cloudflare, а не на Pages).
+
+   Всё содержимое в корень репозитория (не в подпапку), чтобы пути `./app.js` работали.
+
+2. Залей (PowerShell):
+   ```powershell
+   cd путь\к\zavhoz
+   git init
+   git add .
+   git commit -m "Завхоз v1"
+   git branch -M main
+   git remote add origin https://github.com/zzorik/zavhoz.git
+   git push -u origin main
+   ```
+
+3. GitHub → репозиторий → **Settings → Pages** → Source: `Deploy from a branch`, ветка `main`, папка `/ (root)` → Save.
+
+4. Через минуту откроется по адресу `https://zzorik.github.io/zavhoz/`.
+   Всё, кроме голоса, уже работает: таблица, ручной ввод, расчёт, копирование, офлайн.
+
+---
+
+## Часть 2. Cloudflare Worker (нужен только для голоса)
+
+Голос шлёт аудио в Worker, а тот — в OpenRouter с твоим ключом. Ключ в браузер не попадает.
+
+### Вариант А — через дашборд (без установки инструментов)
+
+1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Create Worker**. Имя, например, `zavhoz`.
+2. **Edit code** → вставь всё из `worker.js` → **Deploy**.
+3. **Settings → Variables and Secrets**:
+   - добавь **Secret** `OPENROUTER_API_KEY` = твой ключ OpenRouter (тот, что пополняешь через BestChange → USDC);
+   - (по желанию) переменную `ALLOWED_ORIGIN` = `https://zzorik.github.io` — чтобы прокси дёргал только твой сайт.
+4. Скопируй адрес воркера: `https://zavhoz.ТВОЙ-логин.workers.dev`.
+
+### Вариант Б — через wrangler (PowerShell)
+
+```powershell
+npm install -g wrangler
+wrangler login
+# положи worker.js рядом с wrangler.toml (пример ниже) и:
+wrangler secret put OPENROUTER_API_KEY   # вставь ключ
+wrangler deploy
+```
+Минимальный `wrangler.toml`:
+```toml
+name = "zavhoz"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+```
+
+---
+
+## Часть 3. Соединить
+
+Открой PWA → вкладка **⚙** →
+- **URL Cloudflare Worker**: адрес воркера из части 2;
+- **Модель**: `google/gemini-2.0-flash-001` (по умолчанию — дёшево, слышит русский, отдаёт JSON).
+
+Готово. Жми 🎤, наговаривай остатки, подтверждай — они падают в таблицу.
+
+---
+
+## Локальный тест без деплоя (по желанию)
+
+Голос и офлайн (service worker) требуют `http(s)`, с `file://` не заведутся. Поэтому:
+```powershell
+cd путь\к\zavhoz
+python -m http.server 8000
+```
+Открой `http://localhost:8000`. Для голоса всё равно нужен задеплоенный Worker (или временно вставь его URL в ⚙). Без Worker тестируй через «⌨ напечатать вместо голоса» — тот же парсер по тексту.
+
+---
+
+## Полезное
+
+**Сменить модель.** Любая аудио-модель OpenRouter в ⚙. Дороже-точнее — `openai/gpt-4o-audio-preview`. Если конкретная модель капризничает с форматом аудио — переключись на другую или пользуйся текстовым вводом (он шлёт только текст, работает у всех моделей).
+
+**Аудио.** Браузер пишет в webm/mp4, приложение само перекодирует в WAV 16 кГц перед отправкой — так формат принимают почти все модели.
+
+**Обновил файлы?** Подними версию кэша в `sw.js` (`zavhoz-v1` → `zavhoz-v2`), иначе телефон отдаст старую версию из кэша.
+
+**Поменялась раскладка?** Правь `raskladka.json` руками или пересобери из CSV:
+```python
+import csv, json
+rows=[]
+key={'категория':'kategoriya','позиция':'pozitsiya','единица':'edinica',
+ 'расход_на_чел_в_день':'rashod_v_den','минимум_дней':'min_dney','целевой_запас_дней':'celevoy_dney',
+ 'фикс_количество':'fix_kolichestvo','типовая_фасовка':'fasovka','заметки':'zametki','источник':'istochnik','тип':'tip'}
+num={'rashod_v_den':float,'min_dney':int,'celevoy_dney':int,'fix_kolichestvo':float}
+for r in csv.DictReader(open('raskladka.csv',encoding='utf-8')):
+    o={v:(num.get(v,str)(r[k]) if r[k] else None) for k,v in key.items()}
+    for s in ('kategoriya','pozitsiya','edinica','fasovka','zametki','istochnik','tip'):
+        o[s]=o[s] or ''
+    rows.append(o)
+json.dump(rows,open('raskladka.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
+```
+
+**Логика расчёта** (перенесена 1-в-1 из `zakupka.py`):
+нужно = расход × (люди + патруль) × min(целевой_дней, план_дней); штучное округляется вверх, весовое — до 0.1. Типы: `масштаб` / `фикс` / `при_окончании` / `опционально`.
