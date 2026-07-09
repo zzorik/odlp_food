@@ -2,12 +2,13 @@
 /* Завхоз · Ладога — вся клиентская логика. Ванильный JS, без сборки. */
 
 // ================= состояние =================
-const LS = { ost:'zavhoz.ostatki', camp:'zavhoz.camp', set:'zavhoz.settings' };
+const LS = { ost:'zavhoz.ostatki', ostRaw:'zavhoz.ostatkiRaw', camp:'zavhoz.camp', set:'zavhoz.settings' };
 const load = (k, def) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? def; } catch { return def; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
 let RASKLADKA = [];
-let ostatki  = load(LS.ost, {});                                   // {"Гречка":1.2,...}  отсутствует = не пересчитано
+let ostatki    = load(LS.ost, {});                                 // {"Гречка":1.2,...} в базовых единицах; отсутствует = не пересчитано
+let ostatkiRaw = load(LS.ostRaw, {});                              // {"Рис":"2×450г+4×700г+2кг",...} как ввели/сказали — для показа
 let camp     = load(LS.camp, { lyudi:22, patrul:5, planDney:7, rezhim:'plan' });
 let settings = load(LS.set, { workerUrl:'', model:'google/gemini-2.0-flash-001' });
 
@@ -16,11 +17,12 @@ const $$ = s => [...document.querySelectorAll(s)];
 
 // ================= расчёт закупки (порт zakupka.py) =================
 const SHTUCHNYE = ['банка','шт','упак','десяток','кочан','бутылка','канистра','рулон','плитка','пачка'];
-const IST_ORDER = ['Озон','Пятёрочка','Курки_Исмаил','Консервы'];
+const IST_ORDER = ['Озон','Пятёрочка','Курки','Исмаил','Консервы'];
 const IST_NAMES = {
   'Озон':'📦 ОЗОН (безнал, око телефон)',
   'Пятёрочка':'🛒 ПЯТЁРОЧКА (нал, НЕ на заправке)',
-  'Курки_Исмаил':'🏪 КУРКИ ИСМАИЛ (у причала, заведующая)',
+  'Курки':'🍪 КУРКИ (печенье/сушки, у причала)',
+  'Исмаил':'🥬 ИСМАИЛ (овощи-фрукты, у причала)',
   'Консервы':'🐟 КОНСЕРВЫ (WhatsApp, через Мурмашку)',
 };
 const round1 = x => Math.round(x*10)/10;
@@ -69,6 +71,86 @@ function naitiPozitsiyu(name){
       || RASKLADKA.find(p => { const x = p.pozitsiya.toLowerCase(); return x.includes(n) || n.includes(x); })
       || null;
 }
+
+// ================= парсер количества с пачками =================
+// Понимает: "5.7" · "2х450г 4х700 2кг" · "1 мешок 2 кг" · "3 по 0,9л" · "2 десятка"
+// Для кг/л складывает пачки в базовую единицу. Для шт/десяток/кочан — просто считает.
+function amountKind(edinica){
+  const e = (edinica||'').toLowerCase();
+  if (e.includes('кг')) return { base:'кг', small:'г',  measure:true };
+  if (e.includes('л'))  return { base:'л',  small:'мл', measure:true };
+  return { base:edinica, small:null, measure:false };
+}
+const CONTAINER = /(пачк\w*|мешо?к\w*|мешк\w*|банк\w*|бутыл\w*|коробк\w*)/;
+// определить единицу в куске текста (без \b — он ломается на кириллице)
+function detectUnit(t){
+  if (/кг|kg/.test(t)) return 'кг';
+  if (/мл|ml/.test(t)) return 'мл';
+  if (/(?:гр|г|g)(?![а-яёa-z])/i.test(t)) return 'г';
+  if (/(?:л|l)(?![а-яёa-z])/i.test(t))   return 'л';
+  return null;
+}
+// size в единице `unit` → в «маленькую» (г/мл). packish: безъединичное считать пачкой (г/мл), иначе базой (кг/л)
+function toSmall(size, unit, packish){
+  if (unit === 'кг' || unit === 'л')      return size * 1000;
+  if (unit === 'г'  || unit === 'мл')     return size;
+  return packish ? size : size * 1000;
+}
+// → { ok, value(базовые ед.), pretty(нормализованная строка) } или { ok:false }
+function parseAmount(raw, edinica){
+  const kind = amountKind(edinica);
+  let s = (raw||'').toString().toLowerCase().trim();
+  if (!s) return { ok:false };
+  s = s.replace(/(\d)[.,](\d)/g, '$1.$2');                 // десятичная запятая → точка (0,9 → 0.9)
+  const terms = s.split(/[,;+\n]+/).map(t=>t.trim()).filter(Boolean);
+  let totalSmall = 0, totalCount = 0, anyNum = false;
+  const parts = [];
+  const add = (count, size, unit, packish) => {
+    anyNum = true;
+    if (kind.measure){
+      const small = toSmall(size, unit, packish) * count;
+      totalSmall += small;
+      parts.push(count > 1 ? `${count}×${size}${unit||kind.small}` : `${size}${unit||(packish?kind.small:kind.base)}`);
+    } else {
+      totalCount += count * size;
+      parts.push(count > 1 ? `${count}×${size}` : `${size}`);
+    }
+  };
+  for (let t of terms){
+    const cont = t.match(CONTAINER);
+    if (cont){
+      // «1 мешок 2 кг», «2 пачки по 450» → одна пачка на терм: count перед контейнером, size после
+      const before = t.slice(0, cont.index);
+      const after  = t.slice(cont.index + cont[0].length);
+      const cm = before.match(/(\d+(?:\.\d+)?)\s*$/);
+      const count = cm ? Number(cm[1]) : 1;
+      const sm = after.match(/\d+(?:\.\d+)?/);
+      if (sm){ add(count, Number(sm[0]), detectUnit(after) || detectUnit(t), true); }
+      else if (!kind.measure){ add(count, 1, null, false); }   // «5 банок» штучного → 5
+      else { anyNum = true; parts.push(`${count}шт?`); }        // мешок без веса — не знаем массу
+      continue;
+    }
+    // без контейнера: нормализуем множители и вытаскиваем группы «count × size unit» и одиночные числа
+    let n = (' ' + t + ' ').replace(/[×хx*]/gi, ' x ').replace(/ по /g, ' x ').replace(/ на /g, ' x ');
+    const re = /(\d+(?:\.\d+)?)(?:\s*x\s*(\d+(?:\.\d+)?))?\s*(кг|kg|мл|ml|гр|г|g|л|l)?/gi;
+    let m, found = false;
+    while ((m = re.exec(n)) !== null){
+      if (m[0].trim() === '') { re.lastIndex++; continue; }
+      found = true;
+      const mult = m[2] != null;
+      const count = mult ? Number(m[1]) : 1;
+      const size  = mult ? Number(m[2]) : Number(m[1]);
+      const unit  = m[3] ? detectUnit(m[3]) : null;
+      add(count, size, unit, mult);                            // одиночное без ед. → база; с ×  → пачка
+    }
+    if (!found) continue;
+  }
+  if (!anyNum) return { ok:false };
+  const value = kind.measure ? Math.round(totalSmall/1000 * 1000)/1000 : totalCount;
+  return { ok:true, value, pretty: parts.join(' + ') };
+}
+// это выражение (а не просто число)? — чтобы решать, показывать ли расшифровку
+function isExpr(raw){ return /[^\d.,\s]/.test((raw||'').toString()); }
 
 // ================= промпт (переиспользован из golos.py) =================
 function buildPrompt(reqText){
@@ -240,8 +322,12 @@ function showConfirm(parsed){
   $('#cfCancel').onclick = () => { box.hidden = true; };
   $('#cfSave').onclick = () => {
     const checked = $$('#confirm input[type=checkbox]').filter(c=>c.checked).map(c=>+c.dataset.i);
-    for (const i of checked){ const it = pendingItems[i]; ostatki[it.pozitsiya] = it.qty; }
-    save(LS.ost, ostatki); box.hidden = true; renderOstatki();
+    for (const i of checked){
+      const it = pendingItems[i];
+      ostatki[it.pozitsiya] = it.qty;
+      ostatkiRaw[it.pozitsiya] = it.detali || String(it.qty);
+    }
+    save(LS.ost, ostatki); save(LS.ostRaw, ostatkiRaw); box.hidden = true; renderOstatki();
     toast(`Записал: ${checked.length} поз.`);
   };
 }
@@ -260,23 +346,42 @@ function renderOstatki(){
     wrap.innerHTML = `<div class="cat-title">${esc(cat)}</div>`;
     for (const p of items){
       const has = p.pozitsiya in ostatki;
+      const kind = amountKind(p.edinica);
+      const rawInit = has ? (ostatkiRaw[p.pozitsiya] ?? String(ostatki[p.pozitsiya])) : '';
       const row = document.createElement('div');
       row.className = 'row' + (has?' has-val':'');
       row.innerHTML =
         `<span class="row-name">${esc(p.pozitsiya)}${p.fasovka?`<small>${esc(p.fasovka)}</small>`:''}</span>
-         <input class="row-in${has?' filled':''}" type="number" inputmode="decimal" step="any"
-                placeholder="—" value="${has?ostatki[p.pozitsiya]:''}" aria-label="${esc(p.pozitsiya)}">
+         <input class="row-in${has?' filled':''}" type="text" inputmode="${kind.measure?'text':'decimal'}"
+                placeholder="—" value="${esc(rawInit)}" aria-label="${esc(p.pozitsiya)}"
+                ${kind.measure?`title="можно пачками: 2×450г 4×700 2кг"`:''}>
          <span class="row-unit">${esc(p.edinica)}</span>
-         <button class="row-x" title="убрать">×</button>`;
-      const inp = row.querySelector('.row-in');
+         <button class="row-x" title="убрать">×</button>
+         <small class="row-calc" hidden></small>`;
+      const inp  = row.querySelector('.row-in');
+      const calc = row.querySelector('.row-calc');
+      const showCalc = (raw, r) => {
+        if (r && r.ok && isExpr(raw)) { calc.textContent = `= ${r.value} ${p.edinica} · ${r.pretty}`; calc.hidden = false; }
+        else calc.hidden = true;
+      };
+      if (has) showCalc(rawInit, parseAmount(rawInit, p.edinica));
       inp.addEventListener('input', () => {
-        const val = inp.value.trim().replace(',', '.');
-        if (val === ''){ delete ostatki[p.pozitsiya]; row.classList.remove('has-val'); inp.classList.remove('filled'); }
-        else { const n = parseFloat(val); if (isFinite(n)){ ostatki[p.pozitsiya]=n; row.classList.add('has-val'); inp.classList.add('filled'); } }
+        const raw = inp.value.trim();
+        if (raw === ''){
+          delete ostatki[p.pozitsiya]; delete ostatkiRaw[p.pozitsiya];
+          row.classList.remove('has-val'); inp.classList.remove('filled'); calc.hidden = true;
+        } else {
+          const r = parseAmount(raw, p.edinica);
+          if (r.ok){
+            ostatki[p.pozitsiya] = r.value; ostatkiRaw[p.pozitsiya] = raw;
+            row.classList.add('has-val'); inp.classList.add('filled'); showCalc(raw, r);
+          }
+        }
         saveOstDebounced(); updateOstStat();
       });
       row.querySelector('.row-x').addEventListener('click', () => {
-        delete ostatki[p.pozitsiya]; save(LS.ost, ostatki); renderOstatki(); updateOstStat();
+        delete ostatki[p.pozitsiya]; delete ostatkiRaw[p.pozitsiya];
+        save(LS.ost, ostatki); save(LS.ostRaw, ostatkiRaw); renderOstatki(); updateOstStat();
       });
       wrap.appendChild(row);
     }
@@ -284,7 +389,7 @@ function renderOstatki(){
   }
   updateOstStat();
 }
-let saveT; const saveOstDebounced = () => { clearTimeout(saveT); saveT = setTimeout(()=>save(LS.ost, ostatki), 400); };
+let saveT; const saveOstDebounced = () => { clearTimeout(saveT); saveT = setTimeout(()=>{ save(LS.ost, ostatki); save(LS.ostRaw, ostatkiRaw); }, 400); };
 function updateOstStat(){ $('#ostFilled').textContent = Object.keys(ostatki).length; $('#ostTotal').textContent = RASKLADKA.length; }
 
 // ================= рендер: закупка =================
@@ -387,13 +492,13 @@ function initSettings(){
   const upd = () => { settings.workerUrl=$('#sWorker').value.trim(); settings.model=$('#sModel').value.trim()||'google/gemini-2.0-flash-001'; save(LS.set,settings); };
   $('#sWorker').addEventListener('input',upd); $('#sModel').addEventListener('input',upd);
   $('#sExport').addEventListener('click', ()=>{
-    const blob=new Blob([JSON.stringify({ostatki,camp,settings},null,2)],{type:'application/json'});
+    const blob=new Blob([JSON.stringify({ostatki,ostatkiRaw,camp,settings},null,2)],{type:'application/json'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='zavhoz-backup.json'; a.click();
   });
   $('#sReset').addEventListener('click', ()=>{
     if (!confirm('Сбросить остатки, параметры лагеря и настройки?')) return;
-    localStorage.removeItem(LS.ost); localStorage.removeItem(LS.camp); localStorage.removeItem(LS.set);
-    ostatki={}; camp={lyudi:22,patrul:5,planDney:7,rezhim:'plan'}; settings={workerUrl:'',model:'google/gemini-2.0-flash-001'};
+    localStorage.removeItem(LS.ost); localStorage.removeItem(LS.ostRaw); localStorage.removeItem(LS.camp); localStorage.removeItem(LS.set);
+    ostatki={}; ostatkiRaw={}; camp={lyudi:22,patrul:5,planDney:7,rezhim:"plan"}; settings={workerUrl:'',model:'google/gemini-2.0-flash-001'};
     initCampForm(); $('#sWorker').value=''; $('#sModel').value=settings.model; renderOstatki(); toast('Сброшено');
   });
 }
@@ -422,7 +527,7 @@ async function boot(){
   } catch(e){ toast('Не загрузилась раскладка'); return; }
   renderOstatki();
   $('#ostSearch').addEventListener('input', renderOstatki);
-  $('#ostClear').addEventListener('click', ()=>{ if(confirm('Очистить все введённые остатки?')){ ostatki={}; save(LS.ost,ostatki); renderOstatki(); }});
+  $('#ostClear').addEventListener('click', ()=>{ if(confirm('Очистить все введённые остатки?')){ ostatki={}; ostatkiRaw={}; save(LS.ost,ostatki); save(LS.ostRaw,ostatkiRaw); renderOstatki(); }});
   $('#calcBtn').addEventListener('click', renderZakupka);
   $('#hideUnknown').addEventListener('change', renderZakupka);
   initCampForm(); initSettings(); initVoice();

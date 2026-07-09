@@ -66,14 +66,14 @@
  },
  {
   "kategoriya": "Крупы/бакалея",
-  "pozitsiya": "Макароны (спиральки/перья/рожки)",
+  "pozitsiya": "Макароны",
   "edinica": "кг",
   "rashod_v_den": 0.034,
   "min_dney": 3,
   "celevoy_dney": 7,
   "fix_kolichestvo": null,
   "fasovka": "пачка 400-900г",
-  "zametki": "идеально докупать того же вида что и остаток",
+  "zametki": "",
   "istochnik": "Озон",
   "tip": "масштаб"
  },
@@ -118,7 +118,7 @@
  },
  {
   "kategoriya": "Крупы/бакалея",
-  "pozitsiya": "Чечевица красная",
+  "pozitsiya": "Чечевица",
   "edinica": "кг",
   "rashod_v_den": 0.011,
   "min_dney": 3,
@@ -542,7 +542,7 @@
   "fix_kolichestvo": null,
   "fasovka": "коробка 3-4 кг",
   "zametki": "у заведующей на складе. Утром позвонить перед приездом!",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Курки",
   "tip": "масштаб"
  },
  {
@@ -555,7 +555,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -568,7 +568,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -581,7 +581,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -594,7 +594,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес/мешок",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -607,7 +607,7 @@
   "fix_kolichestvo": null,
   "fasovka": "кочан",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -620,7 +620,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -633,7 +633,7 @@
   "fix_kolichestvo": null,
   "fasovka": "пучок",
   "zametki": "скоропорт",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -646,7 +646,7 @@
   "fix_kolichestvo": null,
   "fasovka": "пучок",
   "zametki": "скоропорт",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -659,7 +659,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -672,7 +672,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -685,7 +685,7 @@
   "fix_kolichestvo": 0.5,
   "fasovka": "пучок/вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "опционально"
  },
  {
@@ -698,7 +698,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -711,7 +711,7 @@
   "fix_kolichestvo": null,
   "fasovka": "штучно/вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -724,7 +724,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -737,7 +737,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес/пакет",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -750,7 +750,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес/пакет",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -763,7 +763,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес/пакет",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -776,7 +776,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес/пакет",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
@@ -789,7 +789,7 @@
   "fix_kolichestvo": null,
   "fasovka": "вес",
   "zametki": "",
-  "istochnik": "Курки_Исмаил",
+  "istochnik": "Исмаил",
   "tip": "масштаб"
  },
  {
