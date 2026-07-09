@@ -1,7 +1,7 @@
 // Завхоз · Ладога — service worker.
 // Стратегия: свои html/js/json/css — «сеть вперёд» (онлайн всегда свежее, офлайн из кэша).
 // Иконки/манифест — «кэш вперёд». Версию можно не бампать: контент сам обновляется онлайн.
-const CACHE = 'zavhoz-v2';
+const CACHE = 'zavhoz-v3';
 const ASSETS = [
   './', './index.html', './styles.css', './app.js', './raskladka.json',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png',
@@ -35,12 +35,12 @@ self.addEventListener('fetch', e => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{});
         return res;
-      }).catch(() => caches.match(req))
+      }).catch(() => caches.match(req, {ignoreSearch:true}))
     );
   } else {
     // кэш вперёд для статики (иконки, манифест)
     e.respondWith(
-      caches.match(req).then(hit => hit || fetch(req).then(res => {
+      caches.match(req, {ignoreSearch:true}).then(hit => hit || fetch(req).then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{});
         return res;

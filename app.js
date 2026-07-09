@@ -1,6 +1,6 @@
 'use strict';
 /* Завхоз · Ладога — вся клиентская логика. Ванильный JS, без сборки. */
-const BUILD = '2026-07-09 · сборка 3 (легенда + вёрстка строк)';
+const BUILD = '2026-07-09 · сборка 4 (обход кэша GitHub Pages)';
 
 // ================= состояние =================
 const LS = { ost:'zavhoz.ostatki', ostRaw:'zavhoz.ostatkiRaw', camp:'zavhoz.camp', set:'zavhoz.settings' };
@@ -524,7 +524,7 @@ function initNet(){
 async function boot(){
   initTabs(); initNet();
   try {
-    const r = await fetch('raskladka.json'); RASKLADKA = await r.json();
+    const r = await fetch('raskladka.json?v=4'); RASKLADKA = await r.json();
   } catch(e){ toast('Не загрузилась раскладка'); return; }
   renderOstatki();
   $('#ostSearch').addEventListener('input', renderOstatki);
