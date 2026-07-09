@@ -1,5 +1,6 @@
 'use strict';
 /* Завхоз · Ладога — вся клиентская логика. Ванильный JS, без сборки. */
+const BUILD = '2026-07-09 · сборка 2 (пачки + Курки/Исмаил)';
 
 // ================= состояние =================
 const LS = { ost:'zavhoz.ostatki', ostRaw:'zavhoz.ostatkiRaw', camp:'zavhoz.camp', set:'zavhoz.settings' };
@@ -531,6 +532,7 @@ async function boot(){
   $('#calcBtn').addEventListener('click', renderZakupka);
   $('#hideUnknown').addEventListener('change', renderZakupka);
   initCampForm(); initSettings(); initVoice();
+  { const v = $('#verStamp'); if (v) v.textContent = `Завхоз · Ладога · ${BUILD}`; }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 boot();
