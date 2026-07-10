@@ -7,7 +7,7 @@
 <title>Завхоз · Ладога</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 <header class="topbar">
@@ -58,9 +58,11 @@
         <span>✏️ <code>2х900</code> <em>или</em> <code>2 по 900 г</code></span>
         <span>✏️ <code>2×450г 4×700 2кг</code> → 5.7 кг</span>
         <span>✏️ просто число = уже в кг/л: <code>5.7</code></span>
+        <span>🛠 нажми на <u>название</u> — изменить или удалить позицию</span>
       </div>
     </div>
     <div class="ost-tools">
+      <button id="posAdd" class="linkbtn">➕ добавить позицию</button>
       <button id="ostClear" class="linkbtn danger">очистить все остатки</button>
     </div>
     <div id="ostList" class="ost-list"></div>
@@ -115,6 +117,7 @@
       <p class="hint">Голосовой ввод шлёт аудио в Worker → OpenRouter. Без URL голос выключен, но таблица, расчёт и копирование работают офлайн.</p>
       <div class="setrow">
         <button id="sExport" class="btn">Выгрузить данные (JSON)</button>
+        <button id="sRaskladka" class="btn">Скачать раскладку (для репозитория)</button>
         <button id="sReset" class="btn danger">Сбросить всё</button>
       </div>
       <p class="ver" id="verStamp">Завхоз · Ладога</p>
@@ -122,8 +125,65 @@
   </section>
 </main>
 
+<div id="posEditor" class="pe-overlay" hidden>
+  <div class="pe-card" role="dialog" aria-modal="true">
+    <h3 id="peTitle">Позиция</h3>
+    <label>Название
+      <input id="peName" type="text" placeholder="Например: Хлебцы ржаные">
+    </label>
+    <div class="pe-grid">
+      <label>Категория
+        <input id="peCat" type="text" list="peCatList" placeholder="Крупы/бакалея">
+        <datalist id="peCatList"></datalist>
+      </label>
+      <label>Единица
+        <select id="peEd"></select>
+      </label>
+      <label>Источник
+        <select id="peIst"></select>
+      </label>
+      <label>Тип
+        <select id="peTip">
+          <option value="масштаб">масштаб — расход на человека</option>
+          <option value="фикс">фикс — постоянное количество</option>
+          <option value="при_окончании">при окончании — брать когда кончилось</option>
+          <option value="опционально">опционально</option>
+        </select>
+      </label>
+    </div>
+    <div class="pe-grid pe-masshtab">
+      <label>Расход на чел/день
+        <input id="peRashod" type="number" step="any" inputmode="decimal" placeholder="0.03">
+      </label>
+      <label>Минимум дней
+        <input id="peMin" type="number" step="1" inputmode="numeric" placeholder="3">
+      </label>
+      <label>Целевой запас, дней
+        <input id="peCel" type="number" step="1" inputmode="numeric" placeholder="7">
+      </label>
+    </div>
+    <div class="pe-grid pe-fix" hidden>
+      <label>Фикс. количество
+        <input id="peFix" type="number" step="any" inputmode="decimal" placeholder="2">
+      </label>
+    </div>
+    <label>Типовая фасовка <small>(подсказка курьеру)</small>
+      <input id="peFas" type="text" placeholder="пачка 900г / мешок 2кг">
+    </label>
+    <label>Заметки
+      <input id="peZam" type="text" placeholder="берём только у Исмаила по вторникам">
+    </label>
+    <div class="pe-btns">
+      <button id="peSave" class="btn primary">Сохранить</button>
+      <button id="peCancel" class="btn">Отмена</button>
+      <button id="peDelete" class="btn danger" hidden>Удалить позицию</button>
+    </div>
+    <p class="pe-note">Правки живут в этом браузере. Чтобы закрепить навсегда и для всех устройств — ⚙ → «скачать раскладку» и положи файл в репозиторий.</p>
+  </div>
+</div>
+
 <div id="toast" class="toast" hidden></div>
 
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

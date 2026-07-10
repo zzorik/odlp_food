@@ -191,3 +191,17 @@ textarea:focus,input:focus{outline:none;border-color:var(--pine)}
 }
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== редактор позиций ===== */
+.row-name{cursor:pointer}
+.row-name:active{opacity:.6}
+.pe-overlay{position:fixed;inset:0;background:rgba(30,42,35,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.pe-card{background:var(--paper,#eef1ea);border-radius:14px;padding:18px 16px;width:100%;max-width:460px;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.pe-card h3{margin:0 0 10px;color:var(--pine)}
+.pe-card label{display:block;margin:8px 0;font-size:12.5px;color:#3c4a3f;font-weight:700}
+.pe-card label small{font-weight:400;color:var(--muted)}
+.pe-card input,.pe-card select{display:block;width:100%;margin-top:4px;padding:9px 10px;font-size:15px;font-weight:400}
+.pe-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.pe-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.pe-btns .danger{margin-left:auto}
+.pe-note{margin:12px 0 0;font-size:11.5px;color:var(--muted)}

@@ -1,13 +1,34 @@
 'use strict';
 /* Завхоз · Ладога — вся клиентская логика. Ванильный JS, без сборки. */
-const BUILD = '2026-07-09 · сборка 4 (обход кэша GitHub Pages)';
+const BUILD = '2026-07-09 · сборка 5 (редактор позиций)';
 
 // ================= состояние =================
-const LS = { ost:'zavhoz.ostatki', ostRaw:'zavhoz.ostatkiRaw', camp:'zavhoz.camp', set:'zavhoz.settings' };
+const LS = { ost:'zavhoz.ostatki', ostRaw:'zavhoz.ostatkiRaw', camp:'zavhoz.camp', set:'zavhoz.settings', redits:'zavhoz.raskladkaEdits' };
 const load = (k, def) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? def; } catch { return def; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
 let RASKLADKA = [];
+let RASKLADKA_BASE = [];                                           // как в raskladka.json (репозиторий)
+let redits = load(LS.redits, { added:[], edited:{}, removed:[] }); // правки поверх базы, живут в браузере
+const POS_META = new Map();                                        // текущее имя → {origin:'base'|'added', baseName}
+
+// merged = база − удалённые + правки + добавленные
+function rebuildRaskladka(){
+  POS_META.clear();
+  const removed = new Set(redits.removed);
+  const out = [];
+  for (const p of RASKLADKA_BASE){
+    if (removed.has(p.pozitsiya)) continue;
+    const item = redits.edited[p.pozitsiya] ? { ...p, ...redits.edited[p.pozitsiya] } : p;
+    POS_META.set(item.pozitsiya, { origin:'base', baseName:p.pozitsiya });
+    out.push(item);
+  }
+  for (const a of redits.added){
+    POS_META.set(a.pozitsiya, { origin:'added', baseName:null });
+    out.push(a);
+  }
+  RASKLADKA = out;
+}
 let ostatki    = load(LS.ost, {});                                 // {"Гречка":1.2,...} в базовых единицах; отсутствует = не пересчитано
 let ostatkiRaw = load(LS.ostRaw, {});                              // {"Рис":"2×450г+4×700г+2кг",...} как ввели/сказали — для показа
 let camp     = load(LS.camp, { lyudi:22, patrul:5, planDney:7, rezhim:'plan' });
@@ -152,6 +173,118 @@ function parseAmount(raw, edinica){
 }
 // это выражение (а не просто число)? — чтобы решать, показывать ли расшифровку
 function isExpr(raw){ return /[^\d.,\s]/.test((raw||'').toString()); }
+
+// ================= редактор позиций =================
+let peCur = null; // текущее имя редактируемой позиции или null для новой
+
+function peFillSelects(){
+  const eds = [...new Set(['кг','л','шт','десяток','кочан', ...RASKLADKA.map(p=>p.edinica).filter(Boolean)])];
+  $('#peEd').innerHTML  = eds.map(e=>`<option>${esc(e)}</option>`).join('');
+  $('#peIst').innerHTML = IST_ORDER.map(i=>`<option>${esc(i)}</option>`).join('');
+  $('#peCatList').innerHTML = [...new Set(RASKLADKA.map(p=>p.kategoriya))].map(c=>`<option value="${esc(c)}">`).join('');
+}
+function peTipSync(){
+  const t = $('#peTip').value;
+  $('.pe-masshtab').hidden = (t !== 'масштаб');
+  $('.pe-fix').hidden = (t !== 'фикс');
+}
+function openPosEditor(name){
+  peCur = name;
+  peFillSelects();
+  const p = name ? RASKLADKA.find(x=>x.pozitsiya===name) : null;
+  $('#peTitle').textContent = p ? 'Изменить позицию' : 'Новая позиция';
+  $('#peName').value   = p ? p.pozitsiya : '';
+  $('#peCat').value    = p ? p.kategoriya : '';
+  $('#peEd').value     = p ? p.edinica : 'кг';
+  $('#peIst').value    = p ? p.istochnik : IST_ORDER[0];
+  $('#peTip').value    = p ? p.tip : 'масштаб';
+  $('#peRashod').value = p && p.rashod_v_den   != null ? p.rashod_v_den   : '';
+  $('#peMin').value    = p && p.min_dney       != null ? p.min_dney       : '';
+  $('#peCel').value    = p && p.celevoy_dney   != null ? p.celevoy_dney   : '';
+  $('#peFix').value    = p && p.fix_kolichestvo!= null ? p.fix_kolichestvo: '';
+  $('#peFas').value    = p ? p.fasovka : '';
+  $('#peZam').value    = p ? p.zametki : '';
+  $('#peDelete').hidden = !p;
+  peTipSync();
+  $('#posEditor').hidden = false;
+  $('#peName').focus();
+}
+function closePosEditor(){ $('#posEditor').hidden = true; peCur = null; }
+
+function peCollect(){
+  const num = v => { const s=(v||'').toString().trim().replace(',','.'); if(s==='')return null; const n=parseFloat(s); return isFinite(n)?n:null; };
+  const int = v => { const n=num(v); return n==null?null:Math.round(n); };
+  return {
+    kategoriya: $('#peCat').value.trim() || 'Разное',
+    pozitsiya:  $('#peName').value.trim(),
+    edinica:    $('#peEd').value,
+    rashod_v_den: num($('#peRashod').value),
+    min_dney:     int($('#peMin').value),
+    celevoy_dney: int($('#peCel').value),
+    fix_kolichestvo: num($('#peFix').value),
+    fasovka: $('#peFas').value.trim(),
+    zametki: $('#peZam').value.trim(),
+    istochnik: $('#peIst').value,
+    tip: $('#peTip').value,
+  };
+}
+function peSave(){
+  const obj = peCollect();
+  if (!obj.pozitsiya){ toast('Название пустое'); return; }
+  const clash = RASKLADKA.find(x => x.pozitsiya === obj.pozitsiya && x.pozitsiya !== peCur);
+  if (clash){ toast('Такая позиция уже есть'); return; }
+  if (obj.tip === 'масштаб'){
+    if (!(obj.rashod_v_den > 0)){ toast('Для типа «масштаб» нужен расход на чел/день'); return; }
+    if (obj.min_dney == null) obj.min_dney = 3;
+    if (obj.celevoy_dney == null) obj.celevoy_dney = 7;
+  }
+  if (obj.tip === 'фикс' && !(obj.fix_kolichestvo > 0)){ toast('Для типа «фикс» нужно количество'); return; }
+  if (peCur){
+    const meta = POS_META.get(peCur);
+    if (meta.origin === 'base') redits.edited[meta.baseName] = obj;
+    else {
+      const i = redits.added.findIndex(a => a.pozitsiya === peCur);
+      if (i >= 0) redits.added[i] = obj; else redits.added.push(obj);
+    }
+    if (obj.pozitsiya !== peCur){                       // переименование → переносим остаток
+      if (peCur in ostatki){ ostatki[obj.pozitsiya] = ostatki[peCur]; delete ostatki[peCur]; }
+      if (peCur in ostatkiRaw){ ostatkiRaw[obj.pozitsiya] = ostatkiRaw[peCur]; delete ostatkiRaw[peCur]; }
+      save(LS.ost, ostatki); save(LS.ostRaw, ostatkiRaw);
+    }
+  } else {
+    redits.added.push(obj);
+  }
+  save(LS.redits, redits); rebuildRaskladka(); renderOstatki(); updateOstStat();
+  closePosEditor(); toast('Сохранено');
+}
+function peDelete(){
+  if (!peCur) return;
+  if (!confirm(`Удалить позицию «${peCur}»?`)) return;
+  const meta = POS_META.get(peCur);
+  if (meta.origin === 'base'){ redits.removed.push(meta.baseName); delete redits.edited[meta.baseName]; }
+  else redits.added = redits.added.filter(a => a.pozitsiya !== peCur);
+  delete ostatki[peCur]; delete ostatkiRaw[peCur];
+  save(LS.ost, ostatki); save(LS.ostRaw, ostatkiRaw); save(LS.redits, redits);
+  rebuildRaskladka(); renderOstatki(); updateOstStat();
+  closePosEditor(); toast('Удалено');
+}
+function initPosEditor(){
+  $('#posAdd').addEventListener('click', () => openPosEditor(null));
+  $('#peSave').addEventListener('click', peSave);
+  $('#peCancel').addEventListener('click', closePosEditor);
+  $('#peDelete').addEventListener('click', peDelete);
+  $('#peTip').addEventListener('change', peTipSync);
+  $('#posEditor').addEventListener('click', e => { if (e.target.id === 'posEditor') closePosEditor(); });
+  $('#sRaskladka').addEventListener('click', () => {
+    const clean = RASKLADKA.map(({kategoriya,pozitsiya,edinica,rashod_v_den,min_dney,celevoy_dney,fix_kolichestvo,fasovka,zametki,istochnik,tip}) =>
+      ({kategoriya,pozitsiya,edinica,rashod_v_den,min_dney,celevoy_dney,fix_kolichestvo,fasovka,zametki,istochnik,tip}));
+    const blob = new Blob([JSON.stringify(clean,null,1)],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'raskladka.json'; a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Скачано — положи в репозиторий вместо старой');
+  });
+}
 
 // ================= промпт (переиспользован из golos.py) =================
 function buildPrompt(reqText){
@@ -361,6 +494,7 @@ function renderOstatki(){
          <small class="row-calc" hidden></small>`;
       const inp  = row.querySelector('.row-in');
       const calc = row.querySelector('.row-calc');
+      row.querySelector('.row-name').addEventListener('click', () => openPosEditor(p.pozitsiya));
       const showCalc = (raw, r) => {
         if (r && r.ok && isExpr(raw)) { calc.textContent = `= ${r.value} ${p.edinica} · ${r.pretty}`; calc.hidden = false; }
         else calc.hidden = true;
@@ -498,8 +632,8 @@ function initSettings(){
   });
   $('#sReset').addEventListener('click', ()=>{
     if (!confirm('Сбросить остатки, параметры лагеря и настройки?')) return;
-    localStorage.removeItem(LS.ost); localStorage.removeItem(LS.ostRaw); localStorage.removeItem(LS.camp); localStorage.removeItem(LS.set);
-    ostatki={}; ostatkiRaw={}; camp={lyudi:22,patrul:5,planDney:7,rezhim:"plan"}; settings={workerUrl:'',model:'google/gemini-2.0-flash-001'};
+    localStorage.removeItem(LS.ost); localStorage.removeItem(LS.ostRaw); localStorage.removeItem(LS.camp); localStorage.removeItem(LS.set); localStorage.removeItem(LS.redits);
+    ostatki={}; ostatkiRaw={}; redits={added:[],edited:{},removed:[]}; rebuildRaskladka(); camp={lyudi:22,patrul:5,planDney:7,rezhim:"plan"}; settings={workerUrl:'',model:'google/gemini-2.0-flash-001'};
     initCampForm(); $('#sWorker').value=''; $('#sModel').value=settings.model; renderOstatki(); toast('Сброшено');
   });
 }
@@ -524,14 +658,14 @@ function initNet(){
 async function boot(){
   initTabs(); initNet();
   try {
-    const r = await fetch('raskladka.json?v=4'); RASKLADKA = await r.json();
+    const r = await fetch('raskladka.json?v=5'); RASKLADKA_BASE = await r.json(); rebuildRaskladka();
   } catch(e){ toast('Не загрузилась раскладка'); return; }
   renderOstatki();
   $('#ostSearch').addEventListener('input', renderOstatki);
   $('#ostClear').addEventListener('click', ()=>{ if(confirm('Очистить все введённые остатки?')){ ostatki={}; ostatkiRaw={}; save(LS.ost,ostatki); save(LS.ostRaw,ostatkiRaw); renderOstatki(); }});
   $('#calcBtn').addEventListener('click', renderZakupka);
   $('#hideUnknown').addEventListener('change', renderZakupka);
-  initCampForm(); initSettings(); initVoice();
+  initCampForm(); initSettings(); initVoice(); initPosEditor();
   { const v = $('#verStamp'); if (v) v.textContent = `Завхоз · Ладога · ${BUILD}`; }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
