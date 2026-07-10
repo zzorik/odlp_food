@@ -7,7 +7,7 @@
 <title>Завхоз · Ладога</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <header class="topbar">
@@ -127,6 +127,7 @@
 
 <div id="posEditor" class="pe-overlay" hidden>
   <div class="pe-card" role="dialog" aria-modal="true">
+    <button id="peClose" class="pe-close" aria-label="Закрыть">×</button>
     <h3 id="peTitle">Позиция</h3>
     <label>Название
       <input id="peName" type="text" placeholder="Например: Хлебцы ржаные">
@@ -184,6 +185,6 @@
 
 <div id="toast" class="toast" hidden></div>
 
-<script src="app.js?v=5"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

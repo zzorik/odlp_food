@@ -1,6 +1,6 @@
 'use strict';
 /* Завхоз · Ладога — вся клиентская логика. Ванильный JS, без сборки. */
-const BUILD = '2026-07-09 · сборка 5 (редактор позиций)';
+const BUILD = '2026-07-09 · сборка 7 (фикс: модалка висела поверх)';
 
 // ================= состояние =================
 const LS = { ost:'zavhoz.ostatki', ostRaw:'zavhoz.ostatkiRaw', camp:'zavhoz.camp', set:'zavhoz.settings', redits:'zavhoz.raskladkaEdits' };
@@ -272,6 +272,8 @@ function initPosEditor(){
   $('#posAdd').addEventListener('click', () => openPosEditor(null));
   $('#peSave').addEventListener('click', peSave);
   $('#peCancel').addEventListener('click', closePosEditor);
+  $('#peClose').addEventListener('click', closePosEditor);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#posEditor').hidden) closePosEditor(); });
   $('#peDelete').addEventListener('click', peDelete);
   $('#peTip').addEventListener('change', peTipSync);
   $('#posEditor').addEventListener('click', e => { if (e.target.id === 'posEditor') closePosEditor(); });
